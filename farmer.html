@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Farmer Dashboard - AgriDirect</title>
+
+  <style>
+    body {
+      font-family: "Poppins", Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+    }
+
+    .topbar {
+      background: #2c9869;
+      color: #fff;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .topbar button {
+      background: #fff;
+      color: #2c9869;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .topbar .logout {
+      background: #e74c3c;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 28px auto;
+      background: #fff;
+      padding: 22px;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    }
+
+    h2 {
+      color: #2c9869;
+      border-bottom: 2px solid #2c9869;
+      padding-bottom: 6px;
+      margin: 20px 0 12px;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: 700;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+    }
+
+    button.primary {
+      background: #2c9869;
+      color: #fff;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 6px;
+      margin-top: 16px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .success-msg {
+      display: none;
+      background: #e9f5ef;
+      color: #2c9869;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 12px;
+    }
+
+    .product-box {
+      background: white;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    img#previewImg {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div>🌾 Farmer Dashboard</div>
+    <div>
+      <button onclick="scrollToFeedback()">⭐ Feedback</button>
+      <button onclick="goHome()">🏠 Home</button>
+      <button class="logout" onclick="logoutFarmer()">🚪 Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Profile -->
+    <h2>Update Profile</h2>
+
+    <label for="farmerPhone">Phone Number</label>
+    <input id="farmerPhone" type="text" placeholder="Enter phone number" />
+
+    <label for="farmerAddress">Address</label>
+    <input id="farmerAddress" type="text" placeholder="Enter address" />
+
+    <button class="primary" onclick="updateProfile()">Save Profile</button>
+
+
+
+    <!-- Farmer Products -->
+    <h2>Your Products</h2>
+    <div id="farmerProductList"></div>
+
+
+    <!-- Add Product -->
+    <h2>Add Product</h2>
+
+    <label>Product Name</label>
+    <input id="productName" type="text">
+
+    <label>Product Description</label>
+    <textarea id="productDesc" rows="3"></textarea>
+
+    <label>Category</label>
+    <select id="productCategory">
+      <option value="vegetables">Vegetables</option>
+      <option value="fruits">Fruits</option>
+      <option value="flowers">Flowers</option>
+    </select>
+
+    <label>Price (₹)</label>
+    <input id="productPrice" type="number" min="0">
+
+    <label>Quantity / Stock (kg/unit)</label>
+    <input type="number" id="prodStock" min="1" placeholder="Enter available quantity">
+
+    <label>Image</label>
+    <input id="productImage" type="file">
+    <img id="previewImg">
+
+    <button class="primary" onclick="submitProduct()">Submit for Approval</button>
+
+    <p class="success-msg" id="successMsg">✅ Product submitted for admin approval!</p>
+
+  </div>
+  <!-- FEEDBACK SECTION -->
+  <div id="farmerFeedbackSection" style="text-align:center; margin-top:40px;">
+    <h2 style="color:#2c9869;">Give Feedback</h2>
+
+    <div id="farmerStars" style="font-size:30px;cursor:pointer;margin-top:10px;">
+      <span data-v="1">★</span>
+      <span data-v="2">★</span>
+      <span data-v="3">★</span>
+      <span data-v="4">★</span>
+      <span data-v="5">★</span>
+    </div>
+
+    <textarea id="farmerFeedbackMsg" rows="3" placeholder="Write your feedback..."
+      style="margin-top:15px;width:60%;padding:12px;border-radius:8px;border:1px solid #aaa;font-size:15px;">
+  </textarea>
+
+    <br>
+
+    <button onclick="submitFarmerFeedback()"
+      style="background:#2c9869;color:#fff;padding:12px 20px;border:none;border-radius:8px;margin-top:15px;cursor:pointer;font-size:15px;">
+      Submit Feedback
+    </button>
+  </div>
+  >
+
+
+  <!-- Logic Starts -->
+  <script>
+
+    const loggedInUser = JSON.parse(localStorage.getItem("loggedInUser"));
+    if (!loggedInUser) {
+      alert("Please log in first.");
+      window.location.href = "index.html";
+    }
+
+
+    /* -----------------------------------
+      PROFILE UPDATE
+    ------------------------------------*/
+    function updateProfile() {
+      let adminData = JSON.parse(localStorage.getItem("adminData")) || { farmers: [] };
+
+      let farmer = adminData.farmers.find(f => f.username === loggedInUser.username);
+      if (!farmer) {
+        farmer = { username: loggedInUser.username, products: [] };
+        adminData.farmers.push(farmer);
+      }
+
+      farmer.mobile = document.getElementById('farmerPhone').value.trim();
+      farmer.address = document.getElementById('farmerAddress').value.trim();
+
+      localStorage.setItem("adminData", JSON.stringify(adminData));
+      alert("Profile updated!");
+    }
+
+
+    /* -----------------------------------
+      SUBMIT PRODUCT FOR APPROVAL
+    ------------------------------------*/
+    function submitProduct() {
+
+      const name = document.getElementById('productName').value.trim();
+      const desc = document.getElementById('productDesc').value.trim();
+      const price = Number(document.getElementById('productPrice').value);
+      const category = document.getElementById('productCategory').value;
+      const stock = Number(document.getElementById('prodStock').value);
+      const imageFile = document.getElementById('productImage').files[0];
+
+      if (!name || !desc || !price || !stock || !imageFile) {
+        alert("Please fill all fields and upload an image.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        const imageBase64 = e.target.result;
+
+        const productData = {
+          name,
+          description: desc,
+          price,
+          category,
+          image: imageBase64,
+          stock,
+          farmer_username: loggedInUser.username
+        };
+
+        try {
+          const response = await fetch('http://localhost:3000/api/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(productData)
+          });
+
+          if (response.ok) {
+            document.getElementById('successMsg').style.display = "block";
+            setTimeout(() => document.getElementById('successMsg').style.display = "none", 2000);
+
+            document.getElementById('productName').value = "";
+            document.getElementById('productDesc').value = "";
+            document.getElementById('productPrice').value = "";
+            document.getElementById('prodStock').value = "";
+            document.getElementById('productImage').value = "";
+            document.getElementById('previewImg').style.display = "none";
+
+            loadFarmerProducts();
+          } else {
+            const err = await response.json();
+            console.error("Server Error:", err);
+            alert("Failed to submit product. Server responded with: " + (err.error || JSON.stringify(err)));
+          }
+        } catch (error) {
+          console.error("Network/Submission Error:", error);
+          alert("Error submitting product. Check console for details. Details: " + error.message);
+        }
+      };
+
+      reader.readAsDataURL(imageFile);
+    }
+
+    /* -----------------------------------
+      IMAGE PREVIEW
+    ------------------------------------*/
+    document.getElementById('productImage').addEventListener("change", function () {
+      const file = this.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.getElementById('previewImg');
+        img.src = e.target.result;
+        img.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+    });
+
+
+
+    /* -----------------------------------
+      SHOW PRODUCTS IN DASHBOARD
+    ------------------------------------*/
+    async function loadFarmerProducts() {
+      const container = document.getElementById("farmerProductList");
+      container.innerHTML = "";
+
+      try {
+        const response = await fetch('http://localhost:3000/api/products');
+        const allProducts = await response.json();
+
+        // Filter products for this farmer
+        const myProducts = allProducts.filter(p => p.farmer_username === loggedInUser.username);
+
+        if (myProducts.length === 0) {
+          container.innerHTML = "<p>No products uploaded yet.</p>";
+          return;
+        }
+
+        myProducts.forEach((p, i) => {
+          let status = `<span style="color:orange;">Pending</span>`;
+          if (p.approved) status = `<span style="color:green;">Approved</span>`;
+          if (p.rejected) status = `<span style="color:red;">Rejected</span>`;
+
+          container.innerHTML += `
+            <div class="product-box">
+              <h3>${p.name}</h3>
+              <p><strong>Price:</strong> ₹${p.price}</p>
+              <p><strong>Available Stock:</strong> ${p.stock}</p>
+              <p><strong>Status:</strong> ${status}</p>
+              <p><strong>Description:</strong> ${p.description || p.desc}</p>
+              <button onclick="deleteProduct(${p.id})" style="background:#e74c3c;color:white;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;margin-top:10px;">Delete</button>
+            </div>
+          `;
+        });
+      } catch (error) {
+        console.error("Error loading products:", error);
+        container.innerHTML = "<p>Error loading products.</p>";
+      }
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm("Are you sure you want to delete this product?")) return;
+      try {
+        const res = await fetch(`http://localhost:3000/api/products/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          alert("Product deleted.");
+          loadFarmerProducts();
+        } else {
+          alert("Failed to delete product.");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Error deleting product.");
+      }
+    }
+
+    /* -----------------------------------
+      ADD MORE STOCK
+    ------------------------------------*/
+    function addMoreStock(index) {
+      // Placeholder for future API implementation
+      alert("Stock update via API not yet implemented.");
+    }
+
+
+
+    /* -----------------------------------
+      EDIT PRICE (requires re-approval)
+    ------------------------------------*/
+    function editPrice(index) {
+      // Placeholder for future API implementation
+      alert("Price edit via API not yet implemented.");
+    }
+
+
+
+    /* -----------------------------------
+      REQUEST REMOVAL
+    ------------------------------------*/
+    function requestRemoval(index) {
+      // Placeholder for future API implementation
+      alert("Removal request via API not yet implemented.");
+    }
+
+
+
+    /* -----------------------------------
+      GENERAL
+    ------------------------------------*/
+    function logoutFarmer() {
+      localStorage.removeItem("loggedInRole");
+      localStorage.removeItem("loggedInUser");
+      window.location.href = "index.html";
+    }
+    /* ---------- FARMER FEEDBACK ---------- */
+    let farmerRating = 0;
+
+    document.querySelectorAll("#farmerStars span").forEach(star => {
+      star.addEventListener("click", function () {
+        farmerRating = Number(this.dataset.v);
+        document.querySelectorAll("#farmerStars span").forEach(s => {
+          s.style.color = Number(s.dataset.v) <= farmerRating ? "gold" : "#ccc";
+        });
+      });
+    });
+
+    function scrollToFeedback() {
+      document.getElementById("farmerFeedbackSection").scrollIntoView({
+        behavior: "smooth"
+      });
+    }
+
+    function submitFarmerFeedback() {
+      if (farmerRating === 0) return alert("Please select rating");
+      const msg = document.getElementById("farmerFeedbackMsg").value.trim();
+
+      let adminData = JSON.parse(localStorage.getItem("adminData")) || {};
+      adminData.feedbacks = adminData.feedbacks || [];
+
+      adminData.feedbacks.push({
+        user: loggedInUser.username,
+        role: "Farmer",
+        rating: farmerRating,
+        message: msg || "(No comment)",
+        date: new Date().toLocaleString()
+      });
+
+      localStorage.setItem("adminData", JSON.stringify(adminData));
+
+      alert("Thank you for your feedback!");
+      farmerRating = 0;
+      document.querySelectorAll("#farmerStars span").forEach(s => s.style.color = "#ccc");
+      document.getElementById("farmerFeedbackMsg").value = "";
+    }
+
+
+    function goHome() { window.location.href = "index.html"; }
+
+    window.onload = loadFarmerProducts;
+
+  </script>
+
+</body>
+
+</html>

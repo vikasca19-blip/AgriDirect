@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Search Results - AgriDirect</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <h1 style="text-align:center;">Search Results</h1>
+
+  <!-- Search Results Container -->
+  <div id="searchResults" class="grid" style="padding: 20px;"></div>
+
+  <!-- Back to Home Button -->
+  <div style="text-align:center; margin-top: 30px;">
+    <a href="index.html" style="text-decoration:none; background:#299309; color:white; padding:10px 20px; border-radius:6px;">← Back to Home</a>
+  </div>
+
+ <script>
+  // -------- Load Approved Farmer Products --------
+  const adminData = JSON.parse(localStorage.getItem("adminData")) || { products: [] };
+
+  // farmer products might use img or image, ensure both exist
+  const approvedFarmerProducts = (adminData.products || [])
+    .filter(p => p.approved)
+    .map(p => ({
+      name: p.name || "",
+      category: p.category ? p.category.toLowerCase() : "other",
+      price: p.price || 0,
+      desc: p.desc || "",
+      img: p.img || p.image || "",   // guarantee an image value
+    }));
+
+  // -------- Static Products (default marketplace) --------
+  const staticProducts = [
+    { name: "Tomatoes", category: "vegetables", price: 40, img: "/images/tommato.jpeg" },
+    { name: "Apples", category: "fruits", price: 120, img: "/images/apple.jpeg" },
+    { name: "Roses", category: "flowers", price: 10, img: "/images/rose.jpeg" },
+    { name: "Carrots", category: "vegetables", price: 35, img: "/images/carrot.jpeg" },
+    { name: "Potatoes", category: "vegetables", price: 25, img: "/images/potato.jpeg" },
+    { name: "Bananas", category: "fruits", price: 50, img: "/images/banana.jpeg" },
+    { name: "Mangoes", category: "fruits", price: 120, img: "/images/mango.jpg" },
+    { name: "Marigold", category: "flowers", price: 30, img: "/images/marigold.jpeg" },
+    { name: "Sunflowers", category: "flowers", price: 25, img: "/images/sunflower.jpeg" }
+  ];
+
+  // Merge static + approved farmer products
+  const allProducts = [...staticProducts, ...approvedFarmerProducts];
+
+  // -------- Get search query from localStorage --------
+  const query = (localStorage.getItem("searchQuery") || "").toLowerCase();
+  const container = document.getElementById("searchResults");
+
+  // -------- Filter products by name / category / desc --------
+  const results = allProducts.filter(p =>
+    p.name.toLowerCase().includes(query) ||
+    p.category.toLowerCase().includes(query) ||
+    (p.desc && p.desc.toLowerCase().includes(query))
+  );
+
+  // -------- Render results --------
+  if (results.length === 0) {
+    container.innerHTML = `<p style="text-align:center;">No results found for '<strong>${query}</strong>'.</p>`;
+  } else {
+    results.forEach(p => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <img src="${p.img}" alt="${p.name}">
+        <h3>${p.name}</h3>
+        <p>${p.desc || ""}</p>
+        <p><strong>₹${p.price}</strong></p>
+        <button onclick="addToCart('${p.name}', ${p.price}, '${p.image || p.img}')">
+  Add to Cart
+</button>
+      `;
+      container.appendChild(card);
+    });
+  }
+function addToCart(name, price, image, farmerUsername, stockAvailable) {
+  // Get existing cart or empty
+  const cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+  // Check if the item is already in the cart from the same farmer
+  const existing = cart.find(item => item.name === name && item.farmer === farmerUsername);
+
+  if (existing) {
+    // Check stock before adding
+    if (existing.quantity + 1 > stockAvailable) {
+      alert("⚠️ Not enough stock available!");
+      return;
+    }
+    existing.quantity += 1;
+  } else {
+    if (stockAvailable <= 0) {
+      alert("⚠️ This product is out of stock!");
+      return;
+    }
+    // Add new product to cart
+    cart.push({
+      name,
+      price,
+      image,       // For consistency in your cart UI
+      img: image,  // Some pages use 'img', keep both
+      quantity: 1,
+      farmer: farmerUsername
+    });
+  }
+
+  localStorage.setItem("cart", JSON.stringify(cart));
+  alert(`${name} added to cart!`);
+}
+
+
+</script>
+
+
+</body>
+</html>

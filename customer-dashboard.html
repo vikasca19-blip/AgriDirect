@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Dashboard - AgriDirect</title>
+
+<style>
+  body {
+    margin: 0;
+    font-family: "Poppins", Arial, sans-serif;
+    background: #f4f6f9;
+  }
+
+  /* Top Bar */
+  .topbar {
+    background: #2c9869;
+    color: white;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .topbar button {
+    background: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #2c9869;
+    margin-left: 10px;
+  }
+  .logout-btn {
+    background: #e74c3c !important;
+    color: white !important;
+  }
+
+  /* Container */
+  .container {
+    max-width: 900px;
+    margin: 28px auto;
+    background: white;
+    padding: 22px;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  }
+
+  h2 {
+    color: #2c9869;
+    margin-bottom: 10px;
+    border-left: 5px solid #2c9869;
+    padding-left: 10px;
+  }
+
+  label {
+    font-weight: 600;
+    margin-top: 14px;
+    display: block;
+  }
+
+  input, textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    margin-top: 6px;
+  }
+
+  button.action {
+    margin-top: 14px;
+    background: #2c9869;
+    color: white;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  /* Order Card */
+  .order-card {
+    background: white;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+    border-left: 4px solid #2c9869;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+  }
+
+  .order-card h3 { margin: 0; }
+
+  .no-orders {
+    padding: 16px;
+    background: #f4f4f4;
+    border-radius: 8px;
+    text-align: center;
+    margin-top: 10px;
+  }
+
+</style>
+</head>
+
+<body>
+
+<!-- Header -->
+<div class="topbar">
+  <div style="font-size:20px;">👤 Customer Dashboard</div>
+  <div>
+    <button onclick="scrollToCustFeedback()">⭐ Feedback</button>
+    <button onclick="goHome()">🏠 Home</button>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- PROFILE UPDATE -->
+  <h2>Update Profile</h2>
+
+  <label>Mobile Number</label>
+  <input id="custMobile">
+
+  <label>Email</label>
+  <input id="custEmail">
+
+  <button class="action" onclick="saveProfile()">Save Profile</button>
+
+  <!-- ADDRESS UPDATE -->
+  <h2>Manage Address</h2>
+
+  <label>Delivery Address</label>
+  <textarea id="custAddress" rows="2"></textarea>
+
+  <button class="action" onclick="saveAddress()">Save Address</button>
+
+  <!-- ORDER HISTORY -->
+  <h2>Your Order History</h2>
+  <div id="orderHistory"></div>
+
+</div>
+<div id="customerOrders"></div>
+
+<!-- FEEDBACK SECTION -->
+<!-- CUSTOMER FEEDBACK SECTION -->
+<div id="custFeedbackSection" style="text-align:center; margin-top:40px;">
+  <h2 style="color:#2c9869;">Give Feedback</h2>
+
+  <div id="custStars" style="font-size:30px;cursor:pointer;margin-top:10px;">
+    <span data-v="1">★</span>
+    <span data-v="2">★</span>
+    <span data-v="3">★</span>
+    <span data-v="4">★</span>
+    <span data-v="5">★</span>
+  </div>
+
+  <textarea 
+    id="custFeedbackMsg" 
+    rows="3" 
+    placeholder="Write your feedback..."
+    style="margin-top:15px;width:60%;padding:12px;border-radius:8px;border:1px solid #aaa;font-size:15px;">
+  </textarea>
+
+  <br>
+
+  <button 
+    onclick="submitCustomerFeedback()" 
+    style="background:#2c9869;color:#fff;padding:12px 20px;border:none;border-radius:8px;margin-top:15px;cursor:pointer;font-size:15px;">
+    Submit Feedback
+  </button>
+</div>
+
+
+<script>
+/* ==========================
+     LOAD USER DATA
+========================== */
+let user = JSON.parse(localStorage.getItem("loggedInUser"));
+let adminData = JSON.parse(localStorage.getItem("adminData")) || { customers: [] };
+let orders = JSON.parse(localStorage.getItem("orders")) || [];
+
+/* ROLE CHECK */
+if (!user || user.role !== "Customer") {
+  alert("Please login as Customer!");
+  window.location.href = "index.html";
+}
+
+/* Prefill profile fields */
+document.getElementById("custMobile").value = user.mobile || "";
+document.getElementById("custEmail").value = user.email || "";
+document.getElementById("custAddress").value = user.address || "";
+
+/* ==========================
+      SAVE PROFILE
+========================== */
+function saveProfile() {
+  user.mobile = document.getElementById("custMobile").value;
+  user.email = document.getElementById("custEmail").value;
+
+  localStorage.setItem("loggedInUser", JSON.stringify(user));
+
+  adminData.customers = adminData.customers.map(c =>
+    c.username === user.username ? user : c
+  );
+
+  localStorage.setItem("adminData", JSON.stringify(adminData));
+
+  alert("Profile Updated!");
+}
+
+/* ==========================
+      SAVE ADDRESS
+========================== */
+function saveAddress() {
+  const newAddr = document.getElementById("custAddress").value.trim();
+  if (!newAddr) return alert("Enter valid address!");
+
+  user.address = newAddr;
+  localStorage.setItem("loggedInUser", JSON.stringify(user));
+
+  adminData.customers = adminData.customers.map(c =>
+    c.username === user.username ? user : c
+  );
+
+  localStorage.setItem("adminData", JSON.stringify(adminData));
+
+  alert("Address Updated!");
+}
+
+/* ==========================
+      LOAD ORDER HISTORY
+========================== */
+function loadOrders() {
+  const list = document.getElementById("orderHistory");
+  list.innerHTML = "";
+
+  const orders = JSON.parse(localStorage.getItem("orders")) || [];
+  const user = JSON.parse(localStorage.getItem("loggedInUser"));
+
+  // Use 'customer' instead of 'username'
+  const myOrders = orders.filter(o => o.customer === user.username);
+
+  if (myOrders.length === 0) {
+    list.innerHTML = `<p class="no-orders">No orders yet.</p>`;
+    return;
+  }
+
+  myOrders.forEach((o, index) => {
+    const div = document.createElement("div");
+    div.className = "order-card";
+
+    div.innerHTML = `
+      <h3>Order #${o.id}</h3>
+      <p><strong>Total:</strong> ₹${o.total}</p>
+      <p><strong>Items:</strong> ${o.items.map(i => `${i.name} x${i.quantity}`).join(", ")}</p>
+      <p><strong>Status:</strong> <span style="color:green;font-weight:bold;">${o.status}</span></p>
+      <p><strong>Payment:</strong> ${o.paymentMode}</p>
+      <p><strong>Date:</strong> ${o.date}</p>
+
+      <button class="action" onclick="trackOrder(${index})">Track</button>
+      ${o.status === "Processing" ? 
+        `<button class="action" style="background:#e74c3c;" onclick="cancelOrder(${index})">Cancel</button>`
+      : ""}
+    `;
+
+    list.appendChild(div);
+  });
+}
+
+
+
+/* ==========================
+      TRACK ORDER
+========================== */
+function trackOrder(orderIndex) {
+  const orders = JSON.parse(localStorage.getItem("orders")) || [];
+  const order = orders.filter(o => o.username === user.username)[orderIndex];
+
+  const stages = ["Processing", "Shipped", "Out for Delivery", "Delivered"];
+  let current = stages.indexOf(order.status);
+
+  if (current < stages.length - 1) {
+    order.status = stages[current + 1];
+    alert("Updated status: " + order.status);
+  } else {
+    alert("Order is already delivered!");
+  }
+
+  // Update orders in storage
+  const allOrders = JSON.parse(localStorage.getItem("orders"));
+  const indexInMain = allOrders.findIndex(o => o.id === order.id);
+  allOrders[indexInMain] = order;
+
+  localStorage.setItem("orders", JSON.stringify(allOrders));
+  loadOrders();
+}
+
+
+/* ==========================
+      CANCEL ORDER
+========================== */
+function cancelOrder(orderIndex) {
+  if (!confirm("Cancel this order?")) return;
+
+  const allOrders = JSON.parse(localStorage.getItem("orders")) || [];
+  const user = JSON.parse(localStorage.getItem("loggedInUser"));
+
+  // Get orders of this customer
+  const myOrders = allOrders.filter(o => o.customer === user.username);
+
+  const orderToCancel = myOrders[orderIndex];
+  if (!orderToCancel) return alert("Order not found!");
+
+  // Remove from main orders array
+  const updatedOrders = allOrders.filter(o => o.id !== orderToCancel.id);
+
+  localStorage.setItem("orders", JSON.stringify(updatedOrders));
+
+  alert("❌ Order Cancelled");
+  loadOrders();        // reload the orders in dashboard
+}
+
+
+function renderCustomerOrders() {
+  const user = JSON.parse(localStorage.getItem("loggedInUser"));
+  if (!user) return;
+
+  const orders = JSON.parse(localStorage.getItem("orders")) || [];
+  const myOrders = orders.filter(o => o.customer === user.username);
+
+  const container = document.getElementById("customerOrders");
+  container.innerHTML = "";
+
+  if (!myOrders.length) {
+    container.innerHTML = "<p>No orders yet.</p>";
+    return;
+  }
+
+  myOrders.forEach(order => {
+    const div = document.createElement("div");
+    div.className = "order-card";
+    div.innerHTML = `
+      <h4>Order ID: ${order.id}</h4>
+      <p>Date: ${order.date}</p>
+      <p>Delivery Address: ${order.customerAddress}</p>
+      <p>Payment Mode: ${order.paymentMode}</p>
+      <ul>
+        ${order.items.map(item => `<li>${item.name} × ${item.quantity} = ₹${item.price*item.quantity}</li>`).join("")}
+      </ul>
+      <p><strong>Total: ₹${order.total}</strong></p>
+      <p>Status: ${order.status}</p>
+    `;
+    container.appendChild(div);
+  });
+}
+
+/* ==========================
+      LOGOUT & HOME
+========================== */
+function logout() {
+  localStorage.removeItem("loggedInUser");
+  localStorage.removeItem("loggedInRole");
+  alert("Logged out!");
+  window.location.href = "index.html";
+}
+
+function goHome() {
+  window.location.href = "index.html";
+}
+/* ---------- CUSTOMER FEEDBACK ---------- */
+let custRating = 0;
+
+document.querySelectorAll("#custStars span").forEach(star => {
+  star.addEventListener("click", function () {
+    custRating = Number(this.dataset.v);
+    document.querySelectorAll("#custStars span").forEach(s => {
+      s.style.color = Number(s.dataset.v) <= custRating ? "gold" : "#ccc";
+    });
+  });
+});
+
+function scrollToCustFeedback() {
+  document.getElementById("custFeedbackSection").scrollIntoView({
+    behavior: "smooth"
+  });
+}
+
+
+function submitCustomerFeedback() {
+  if (custRating === 0) return alert("Please select rating");
+  const msg = document.getElementById("custFeedbackMsg").value.trim();
+
+  let adminData = JSON.parse(localStorage.getItem("adminData")) || {};
+  adminData.feedbacks = adminData.feedbacks || [];
+
+  adminData.feedbacks.push({
+    user: user.username,
+    role: "Customer",
+    rating: custRating,
+    message: msg || "(No comment)",
+    date: new Date().toLocaleString()
+  });
+
+  localStorage.setItem("adminData", JSON.stringify(adminData));
+
+  alert("Thank you for your feedback!");
+  custRating = 0;
+  document.querySelectorAll("#custStars span").forEach(s => s.style.color = "#ccc");
+  document.getElementById("custFeedbackMsg").value = "";
+}
+
+/* LOAD EVERYTHING */
+loadOrders();
+</script>
+
+</body>
+</html>
